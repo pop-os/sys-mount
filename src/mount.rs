@@ -1,12 +1,18 @@
-use libc::*;
 use fstype::FilesystemType;
+use libc::*;
+use loopdev::{LoopControl, LoopDevice};
 use std::ffi::CString;
+use std::fs::File;
 use std::io;
 use std::os::unix::ffi::OsStrExt;
+use std::os::unix::io::{RawFd, AsRawFd};
 use std::path::Path;
 use std::ptr;
 use super::to_cstring;
 use umount::{unmount_, Unmount, UnmountFlags};
+
+const LOOP_SET_FD: u64 = 0x4C00;
+const LOOP_CLR_FD: u64 = 0x4C01;
 
 bitflags! {
     /// Flags which may be specified when mounting a file system.
@@ -93,11 +99,19 @@ bitflags! {
 pub struct Mount {
     pub(crate) target: CString,
     pub(crate) fstype: String,
+    loopback_fd: Option<RawFd>,
 }
 
 impl Unmount for Mount {
     fn unmount(&self, flags: UnmountFlags) -> io::Result<()> {
-        unsafe { unmount_(self.target.as_ptr(), flags) }
+        unsafe {
+            unmount_(self.target.as_ptr(), flags)?;
+            if let Some(fd) = self.loopback_fd {
+                unmount_loopback(fd)?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -150,9 +164,27 @@ impl Mount {
           T: AsRef<Path>,
           F: Into<FilesystemType<'a>>,
     {
+        let mut loopback_fd = None;
         let c_source = match source.as_ref() {
             Some(source) => {
-                let source = to_cstring(source.as_ref().as_os_str().as_bytes())?;
+                // Create a loopback device if an iso or squashfs is being mounted.
+                let source = source.as_ref();
+                let mut loopback = None;
+                if let Some(ext) = source.extension() {
+                    if ext == "iso" || ext == "squashfs" {
+                        loopback = Some(mount_loopback(source)?);
+                    }
+                }
+
+                let source = match loopback {
+                    Some(loopback) => {
+                        let path = loopback.path().expect("loopback does not have path");
+                        loopback_fd = Some(loopback.as_raw_fd());
+                        to_cstring(path.as_os_str().as_bytes())?
+                    }
+                    None => to_cstring(source.as_os_str().as_bytes())?
+                };
+
                 Some(source)
             }
             None => None
@@ -177,6 +209,7 @@ impl Mount {
                         Ok(()) => return Ok(Self {
                             target: c_target,
                             fstype: fstype.to_owned(),
+                            loopback_fd
                         }),
                         Err(why) => res = Err(why)
                     }
@@ -193,6 +226,7 @@ impl Mount {
                     Ok(()) => Ok(Self {
                         target: c_target,
                         fstype: fstype.to_owned(),
+                        loopback_fd
                     }),
                     Err(why) => Err(why)
                 }
@@ -228,5 +262,28 @@ fn mount_(
     match result {
         0 => Ok(()),
         _err => Err(io::Error::last_os_error()),
+    }
+}
+
+fn mount_loopback(source: &Path) -> io::Result<LoopDevice> {
+    let image = File::open(source)?;
+    let loopback = LoopControl::open().and_then(|ctrl| ctrl.next_free())?;
+    associate_loopback(&image, &loopback)?;
+    Ok(loopback)
+}
+
+fn associate_loopback<I: AsRawFd, L: AsRawFd>(iso: &I, loopback: &L) -> io::Result<()> {
+    if unsafe { ioctl(loopback.as_raw_fd(), LOOP_SET_FD, iso.as_raw_fd()) } < 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+fn unmount_loopback(loopback: RawFd) -> io::Result<()> {
+    if unsafe { ioctl(loopback, LOOP_CLR_FD, 0) } < 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
     }
 }

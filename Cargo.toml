@@ -7,7 +7,7 @@ authors = ["Michael Aaron Murphy <mmstickman@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 keywords = ["linux", "sys", "mount", "umount"]
-categories = ["external-ffi-bindings", "filesystem", "os"]
+categories = ["external-ffi-bindings", "filesystem", "os::unix-apis"]
 
 [badges]
 maintenance = { status = "passively-maintained" }

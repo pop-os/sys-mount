@@ -4,6 +4,44 @@ use std::io;
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::ptr;
+use std::ops::Deref;
+
+/// Unmount trait which enables any type that implements it to be upgraded into an `UnmountDrop`.
+pub trait Unmount {
+    /// Unmount this mount with the given `flags`.
+    fn unmount(&self, flags: UnmountFlags) -> io::Result<()>;
+
+    /// Upgrades `Self` into an `UnmountDrop`, which will unmount the mount when it is dropped.
+    fn into_unmount_drop(self, flags: UnmountFlags) -> UnmountDrop<Self> where Self: Sized {
+        UnmountDrop { mount: self, flags}
+    }
+}
+
+/// Unmounts the underlying mounted device upon drop.
+pub struct UnmountDrop<T: Unmount> {
+    pub(crate) mount: T,
+    pub(crate) flags: UnmountFlags,
+}
+
+impl<T: Unmount> UnmountDrop<T> {
+    /// Modify the previously-set unmount flags.
+    pub fn set_unmount_flags(&mut self, flags: UnmountFlags) {
+        self.flags = flags;
+    }
+}
+
+impl<T: Unmount> Deref for UnmountDrop<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &self.mount
+    }
+}
+
+impl<T: Unmount> Drop for UnmountDrop<T> {
+    fn drop(&mut self) {
+        let _ = self.mount.unmount(self.flags);
+    }
+}
 
 bitflags! {
     /// Flags which may be specified when unmounting a file system.

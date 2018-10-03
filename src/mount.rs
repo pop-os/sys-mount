@@ -6,8 +6,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::ptr;
 use super::to_cstring;
-use temp_mount::TempMount;
-use umount::UnmountFlags;
+use umount::{unmount_, Unmount, UnmountFlags};
 
 bitflags! {
     /// Flags which may be specified when mounting a file system.
@@ -94,6 +93,12 @@ bitflags! {
 pub struct Mount {
     pub(crate) target: CString,
     pub(crate) fstype: String,
+}
+
+impl Unmount for Mount {
+    fn unmount(&self, flags: UnmountFlags) -> io::Result<()> {
+        unsafe { unmount_(self.target.as_ptr(), flags) }
+    }
 }
 
 impl Mount {
@@ -200,22 +205,6 @@ impl Mount {
     /// This is useful in the event that the mounted device was mounted automatically.
     pub fn get_fstype(&self) -> &str {
         &self.fstype
-    }
-
-    /// Upgrades the `Mount` into a `TempMount`, which will unmount the mount on drop.
-    /// 
-    /// ```rust,ignore
-    /// use sys_mount::UnmountFlags;
-    /// 
-    /// {
-    ///     let temp = mount.into_temp(UnmountFlags::DETACH);
-    ///     // Do thing with temporarily-mounted file system.
-    /// }
-    /// 
-    /// // Mount no longer exists.
-    /// ```
-    pub fn into_temp(self, flags: UnmountFlags) -> TempMount {
-        TempMount { mount: self, unmount_flags: flags }
     }
 }
 

@@ -3,9 +3,7 @@
 ![Rust Compatibility](https://img.shields.io/badge/rust-1.24.1%20tested-green.svg)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://gitlab.com/evertiro/maco/blob/master/LICENSE)
 
-High level FFI bindings to the `mount` and `umount2` system calls, for Rust. Provides a `SupportedFilesystems` type for querying valid file system types and for use in automatic file system mounting; a `Mount` type for mounting file systems, with the option to retain a mount after it has been dropped; and a standalone `unmount` function for unmounting an existing mount option.
-
-> By default, `Mount` will unmount the file system after it has been dropped. The `drop_without_unmounting()` method can be used to drop it without doing so.
+High level FFI bindings to the `mount` and `umount2` system calls, for Rust.
 
 ## Examples
 

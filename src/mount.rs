@@ -158,7 +158,7 @@ impl Mount {
     /// The automatic variant of `fstype` works by attempting to mount the `source` with all supported
     /// device-based file systems until it succeeds, or fails after trying all possible options.
     pub fn new<'a, S, T, F>(
-        source: Option<S>,
+        source: S,
         target: T,
         fstype: F,
         mut flags: MountFlags,
@@ -170,36 +170,36 @@ impl Mount {
     {
         let mut fstype = fstype.into();
         let mut loopback = None;
-        let c_source = match source.as_ref() {
-            Some(source) => {
-                // Create a loopback device if an iso or squashfs is being mounted.
-                let source = source.as_ref();
-                if let Some(ext) = source.extension() {
-                    let extf = if ext == "iso" { 1 } else { 0 }
-                        | if ext == "squashfs" { 2 } else { 0 };
-                    
-                    if extf != 0 {
-                        loopback = Some(mount_loopback(source)?);
-                        fstype = if extf == 1 {
-                            FilesystemType::Manual("iso9660")
-                        } else {
-                            FilesystemType::Manual("squashfs")
-                        };
-                    }
+
+        let source = source.as_ref();
+        let c_source = if source.as_os_str().is_empty() {
+            // Create a loopback device if an iso or squashfs is being mounted.
+            if let Some(ext) = source.extension() {
+                let extf = if ext == "iso" { 1 } else { 0 }
+                    | if ext == "squashfs" { 2 } else { 0 };
+
+                if extf != 0 {
+                    loopback = Some(mount_loopback(source)?);
+                    fstype = if extf == 1 {
+                        FilesystemType::Manual("iso9660")
+                    } else {
+                        FilesystemType::Manual("squashfs")
+                    };
                 }
-
-                let source = match loopback {
-                    Some(ref loopback) => {
-                        let path = loopback.path().expect("loopback does not have path");
-                        flags |= MountFlags::RDONLY;
-                        to_cstring(path.as_os_str().as_bytes())?
-                    }
-                    None => to_cstring(source.as_os_str().as_bytes())?
-                };
-
-                Some(source)
             }
-            None => None
+
+            let source = match loopback {
+                Some(ref loopback) => {
+                    let path = loopback.path().expect("loopback does not have path");
+                    flags |= MountFlags::RDONLY;
+                    to_cstring(path.as_os_str().as_bytes())?
+                }
+                None => to_cstring(source.as_os_str().as_bytes())?
+            };
+
+            Some(source)
+        } else {
+            None
         };
 
         let c_target = to_cstring(target.as_ref().as_os_str().as_bytes())?;

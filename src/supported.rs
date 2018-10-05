@@ -3,6 +3,7 @@ use std::io::{self, BufRead, BufReader};
 
 /// Data structure for validating if a filesystem argument is valid, and used within
 /// automatic file system mounting.
+#[derive(Clone, Debug)]
 pub struct SupportedFilesystems {
     nodev: Vec<bool>,
     fs: Vec<String>
@@ -10,8 +11,8 @@ pub struct SupportedFilesystems {
 
 impl SupportedFilesystems {
     pub fn new() -> io::Result<Self> {
-        let mut fss = Vec::new();
-        let mut nodevs = Vec::new();
+        let mut fss = Vec::with_capacity(64);
+        let mut nodevs = Vec::with_capacity(64);
 
         for line in BufReader::new(File::open("/proc/filesystems")?).lines() {
             let line = line?;

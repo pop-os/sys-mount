@@ -9,6 +9,9 @@ use std::ops::Deref;
 /// Unmount trait which enables any type that implements it to be upgraded into an `UnmountDrop`.
 pub trait Unmount {
     /// Unmount this mount with the given `flags`.
+    /// 
+    /// This will also detach the loopback device that the mount is assigned to, if
+    /// it was associated with a loopback device.
     fn unmount(&self, flags: UnmountFlags) -> io::Result<()>;
 
     /// Upgrades `Self` into an `UnmountDrop`, which will unmount the mount when it is dropped.
@@ -69,6 +72,10 @@ bitflags! {
 }
 
 /// Unmounts the device at `path` using the provided `UnmountFlags`.
+/// 
+/// This will not detach a loopback device if the mount was attached to one. This behavior may
+/// change in the future, once the [loopdev](https://crates.io/crates/loopdev) crate supports
+/// querying loopback device info.
 /// 
 /// ```rust,no_run
 /// extern crate sys_mount;

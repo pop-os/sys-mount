@@ -1,5 +1,8 @@
 //! High level abstraction over the `mount` and `umount2` system calls.
 //! 
+//! Additionally creates loopback devices automatically when mounting an iso or
+//! squashfs file.
+//! 
 //! # Example
 //! 
 //! ```rust,no_run

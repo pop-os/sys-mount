@@ -134,7 +134,7 @@ impl Mount {
     /// 
     ///     // Attempt to mount the src device to the dest directory.
     ///     let mount_result = Mount::new(
-    ///         "/imaginary/block/device".into(),
+    ///         "/imaginary/block/device",
     ///         "/tmp/location",
     ///         &supported,
     ///         MountFlags::empty(),

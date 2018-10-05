@@ -7,6 +7,8 @@ pub enum FilesystemType<'a> {
     Auto(&'a SupportedFilesystems),
     /// The caller can avoid costly trial-and-error iteration with this variant.
     Manual(&'a str),
+    /// A specific set of file systems to attempt to mount with.
+    Set(&'a [&'a str]),
 }
 
 impl<'a> From<&'a SupportedFilesystems> for FilesystemType<'a> {
@@ -18,5 +20,11 @@ impl<'a> From<&'a SupportedFilesystems> for FilesystemType<'a> {
 impl<'a> From<&'a str> for FilesystemType<'a> {
     fn from(s: &'a str) -> Self {
         FilesystemType::Manual(s)
+    }
+}
+
+impl<'a> From<&'a [&'a str]> for FilesystemType<'a> {
+    fn from(s: &'a [&'a str]) -> Self {
+        FilesystemType::Set(s)
     }
 }

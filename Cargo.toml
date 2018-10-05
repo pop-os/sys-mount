@@ -15,7 +15,7 @@ maintenance = { status = "passively-maintained" }
 [dependencies]
 bitflags = "1.0.4"
 libc = "0.2.43"
-loopdev = { git = "https://github.com/mmstick/loopdev" }
+loopdev = "0.2.1"
 
 [dev-dependencies]
 clap = "2.32.0"

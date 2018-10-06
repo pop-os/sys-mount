@@ -172,7 +172,7 @@ impl Mount {
         let mut loopback = None;
 
         let source = source.as_ref();
-        let c_source = if source.as_os_str().is_empty() {
+        let c_source = if ! source.as_os_str().is_empty() {
             // Create a loopback device if an iso or squashfs is being mounted.
             if let Some(ext) = source.extension() {
                 let extf = if ext == "iso" { 1 } else { 0 }

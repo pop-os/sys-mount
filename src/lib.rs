@@ -1,13 +1,13 @@
 //! High level abstraction over the `mount` and `umount2` system calls.
-//! 
+//!
 //! Additionally creates loopback devices automatically when mounting an iso or
 //! squashfs file.
-//! 
+//!
 //! # Example
-//! 
+//!
 //! ```rust,no_run
 //! extern crate sys_mount;
-//! 
+//!
 //! use std::process::exit;
 //! use sys_mount::{
 //!     Mount,
@@ -16,12 +16,12 @@
 //!     Unmount,
 //!     UnmountFlags
 //! };
-//! 
+//!
 //! fn main() {
 //!     // Fetch a list of supported file systems.
 //!     // When mounting, a file system will be selected from this.
 //!     let supported = SupportedFilesystems::new().unwrap();
-//! 
+//!
 //!     // Attempt to mount the src device to the dest directory.
 //!     let mount_result = Mount::new(
 //!         "/imaginary/block/device",
@@ -30,7 +30,7 @@
 //!         MountFlags::empty(),
 //!         None
 //!     );
-//! 
+//!
 //!     match mount_result {
 //!         Ok(mount) => {
 //!             // Make the mount temporary, so that it will be unmounted on drop.
@@ -59,8 +59,28 @@ pub use self::mount::*;
 pub use self::supported::*;
 pub use self::umount::*;
 
-use std::io;
+use libc::swapoff as c_swapoff;
+use std::os::unix::ffi::OsStrExt;
+use std::ptr;
 use std::ffi::CString;
+use std::path::Path;
+use std::io::{self, Error, ErrorKind};
+
+/// Unmounts a swap partition using `libc::swapoff`
+pub fn swapoff<P: AsRef<Path>>(dest: P) -> io::Result<()> {
+    unsafe {
+        let swap = CString::new(dest.as_ref().as_os_str().as_bytes().to_owned());
+        let swap_ptr = swap.as_ref().ok().map_or(ptr::null(), |cstr| cstr.as_ptr());
+
+        match c_swapoff(swap_ptr) {
+            0 => Ok(()),
+            _err => Err(Error::new(
+                ErrorKind::Other,
+                format!("failed to swapoff {}: {}", dest.as_ref().display(), Error::last_os_error())
+            )),
+        }
+    }
+}
 
 fn to_cstring(data: &[u8]) -> io::Result<CString> {
     CString::new(data).map_err(|why| {

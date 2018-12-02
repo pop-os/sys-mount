@@ -1,3 +1,4 @@
+use super::to_cstring;
 use fstype::FilesystemType;
 use libc::*;
 use loopdev::{LoopControl, LoopDevice};
@@ -8,7 +9,6 @@ use std::os::unix::ffi::OsStrExt;
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::ptr;
-use super::to_cstring;
 use umount::{unmount_, Unmount, UnmountDrop, UnmountFlags};
 
 const LOOP_SET_FD: u64 = 0x4C00;
@@ -163,22 +163,22 @@ impl Mount {
         target: T,
         fstype: F,
         mut flags: MountFlags,
-        data: Option<&str>
+        data: Option<&str>,
     ) -> io::Result<Self>
-    where S: AsRef<Path>,
-          T: AsRef<Path>,
-          F: Into<FilesystemType<'a>>,
+    where
+        S: AsRef<Path>,
+        T: AsRef<Path>,
+        F: Into<FilesystemType<'a>>,
     {
         let mut fstype = fstype.into();
         let mut loopback = None;
         let mut loop_path = None;
 
         let source = source.as_ref();
-        let c_source = if ! source.as_os_str().is_empty() {
+        let c_source = if !source.as_os_str().is_empty() {
             // Create a loopback device if an iso or squashfs is being mounted.
             if let Some(ext) = source.extension() {
-                let extf = if ext == "iso" { 1 } else { 0 }
-                    | if ext == "squashfs" { 2 } else { 0 };
+                let extf = if ext == "iso" { 1 } else { 0 } | if ext == "squashfs" { 2 } else { 0 };
 
                 if extf != 0 {
                     loopback = Some(mount_loopback(source)?);
@@ -198,7 +198,7 @@ impl Mount {
                     loop_path = Some(path);
                     cstr
                 }
-                None => to_cstring(source.as_os_str().as_bytes())?
+                None => to_cstring(source.as_os_str().as_bytes())?,
             };
 
             Some(source)
@@ -210,25 +210,32 @@ impl Mount {
         let c_data = match data.map(|o| to_cstring(o.as_bytes())) {
             Some(Ok(string)) => Some(string),
             Some(Err(why)) => return Err(why),
-            None => None
+            None => None,
         };
 
         let data = c_data.as_ref().map_or(ptr::null(), |d| d.as_ptr()) as *const c_void;
-        let mut mount_data = MountData { c_source, c_target, flags, data };
+        let mut mount_data = MountData {
+            c_source,
+            c_target,
+            flags,
+            data,
+        };
 
         let mut res = match fstype {
             FilesystemType::Auto(supported) => mount_data.automount(supported.dev_file_systems()),
             FilesystemType::Set(set) => mount_data.automount(set.iter().cloned()),
-            FilesystemType::Manual(fstype) => mount_data.mount(fstype)
+            FilesystemType::Manual(fstype) => mount_data.mount(fstype),
         };
 
         match res {
             Ok(ref mut mount) => {
                 mount.loopback = loopback;
                 mount.loop_path = loop_path;
-            },
-            Err(_) => if let Some(loopback) = loopback {
-                let _ = loopback.detach();
+            }
+            Err(_) => {
+                if let Some(loopback) = loopback {
+                    let _ = loopback.detach();
+                }
             }
         }
 
@@ -253,27 +260,30 @@ struct MountData {
     c_source: Option<CString>,
     c_target: CString,
     flags: MountFlags,
-    data: *const c_void
+    data: *const c_void,
 }
 
 impl MountData {
     fn mount(&mut self, fstype: &str) -> io::Result<Mount> {
         let c_fstype = to_cstring(fstype.as_bytes())?;
-        match mount_(self.c_source.as_ref(), &self.c_target, &c_fstype, self.flags, self.data) {
+        match mount_(
+            self.c_source.as_ref(),
+            &self.c_target,
+            &c_fstype,
+            self.flags,
+            self.data,
+        ) {
             Ok(()) => Ok(Mount {
                 target: self.c_target.clone(),
                 fstype: fstype.to_owned(),
                 loopback: None,
                 loop_path: None,
             }),
-            Err(why) => Err(why)
+            Err(why) => Err(why),
         }
     }
 
-    fn automount<'a, I: Iterator<Item = &'a str> + 'a>(
-        mut self,
-        iter: I,
-    ) -> io::Result<Mount> {
+    fn automount<'a, I: Iterator<Item = &'a str> + 'a>(mut self, iter: I) -> io::Result<Mount> {
         let mut res = Ok(());
 
         for fstype in iter {
@@ -284,8 +294,11 @@ impl MountData {
         }
 
         match res {
-            Ok(()) => Err(io::Error::new(io::ErrorKind::NotFound, "no supported file systems found")),
-            Err(why) => Err(why)
+            Ok(()) => Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "no supported file systems found",
+            )),
+            Err(why) => Err(why),
         }
     }
 }
@@ -303,7 +316,7 @@ fn mount_(
             c_target.as_ptr(),
             c_fstype.as_ptr(),
             flags.bits(),
-            c_data
+            c_data,
         )
     };
 

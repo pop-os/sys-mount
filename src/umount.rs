@@ -1,22 +1,25 @@
 use libc::*;
 use std::ffi::CString;
 use std::io;
+use std::ops::Deref;
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::ptr;
-use std::ops::Deref;
 
 /// Unmount trait which enables any type that implements it to be upgraded into an `UnmountDrop`.
 pub trait Unmount {
     /// Unmount this mount with the given `flags`.
-    /// 
+    ///
     /// This will also detach the loopback device that the mount is assigned to, if
     /// it was associated with a loopback device.
     fn unmount(&self, flags: UnmountFlags) -> io::Result<()>;
 
     /// Upgrades `Self` into an `UnmountDrop`, which will unmount the mount when it is dropped.
-    fn into_unmount_drop(self, flags: UnmountFlags) -> UnmountDrop<Self> where Self: Sized {
-        UnmountDrop { mount: self, flags}
+    fn into_unmount_drop(self, flags: UnmountFlags) -> UnmountDrop<Self>
+    where
+        Self: Sized,
+    {
+        UnmountDrop { mount: self, flags }
     }
 }
 
@@ -49,11 +52,11 @@ impl<T: Unmount> Drop for UnmountDrop<T> {
 bitflags! {
     /// Flags which may be specified when unmounting a file system.
     pub struct UnmountFlags: i32 {
-        /// Force unmount even if busy. This can cause data loss. (Only for NFS mounts.) 
+        /// Force unmount even if busy. This can cause data loss. (Only for NFS mounts.)
         const FORCE = MNT_FORCE;
 
         /// Perform a lazy unmount: make the mount point unavailable for new accesses,
-        /// and actually perform the unmount when the mount point ceases to be busy. 
+        /// and actually perform the unmount when the mount point ceases to be busy.
         const DETACH = MNT_DETACH;
 
         /// Mark the mount point as expired. If a mount point is not currently in use,
@@ -61,7 +64,7 @@ bitflags! {
         /// but marks the mount point as expired. The mount point remains expired as
         /// long as it isn't accessed by any process. A second umount2() call specifying
         /// MNT_EXPIRE unmounts an expired mount point. This flag cannot be specified with
-        /// either MNT_FORCE or MNT_DETACH. 
+        /// either MNT_FORCE or MNT_DETACH.
         const EXPIRE = MNT_EXPIRE;
 
         /// Don't dereference target if it is a symbolic link. This flag allows security
@@ -72,16 +75,16 @@ bitflags! {
 }
 
 /// Unmounts the device at `path` using the provided `UnmountFlags`.
-/// 
+///
 /// This will not detach a loopback device if the mount was attached to one. This behavior may
 /// change in the future, once the [loopdev](https://crates.io/crates/loopdev) crate supports
 /// querying loopback device info.
-/// 
+///
 /// ```rust,no_run
 /// extern crate sys_mount;
-/// 
+///
 /// use sys_mount::{unmount, UnmountFlags};
-/// 
+///
 /// fn main() {
 ///     // Unmount device at `/target/path` lazily.
 ///     let result = unmount("/target/path", UnmountFlags::DETACH);
@@ -89,7 +92,8 @@ bitflags! {
 /// ```
 pub fn unmount<P: AsRef<Path>>(path: P, flags: UnmountFlags) -> io::Result<()> {
     let mount = CString::new(path.as_ref().as_os_str().as_bytes().to_owned());
-    let mount_ptr = mount.as_ref()
+    let mount_ptr = mount
+        .as_ref()
         .ok()
         .map_or(ptr::null(), |cstr| cstr.as_ptr());
 
@@ -99,6 +103,6 @@ pub fn unmount<P: AsRef<Path>>(path: P, flags: UnmountFlags) -> io::Result<()> {
 pub(crate) unsafe fn unmount_(mount_ptr: *const c_char, flags: UnmountFlags) -> io::Result<()> {
     match umount2(mount_ptr, flags.bits()) {
         0 => Ok(()),
-        _err => Err(io::Error::last_os_error())
+        _err => Err(io::Error::last_os_error()),
     }
 }

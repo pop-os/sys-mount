@@ -2,8 +2,8 @@ extern crate clap;
 extern crate sys_mount;
 
 use clap::{App, Arg};
-use sys_mount::{Mount, MountFlags, SupportedFilesystems};
 use std::process::exit;
+use sys_mount::{Mount, MountFlags, SupportedFilesystems};
 
 fn main() {
     let matches = App::new("mount")

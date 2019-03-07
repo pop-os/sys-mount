@@ -2,16 +2,13 @@ use fstype::FilesystemType;
 use libc::*;
 use loopdev::{LoopControl, LoopDevice};
 use std::ffi::CString;
-use std::fs::File;
 use std::io;
 use std::os::unix::ffi::OsStrExt;
-use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::ptr;
 use super::to_cstring;
 use umount::{unmount_, Unmount, UnmountDrop, UnmountFlags};
 
-const LOOP_SET_FD: u64 = 0x4C00;
 
 bitflags! {
     /// Flags which may be specified when mounting a file system.
@@ -181,19 +178,20 @@ impl Mount {
                     | if ext == "squashfs" { 2 } else { 0 };
 
                 if extf != 0 {
-                    loopback = Some(mount_loopback(source)?);
                     fstype = if extf == 1 {
+                        flags |= MountFlags::RDONLY;
                         FilesystemType::Manual("iso9660")
                     } else {
+                        flags |= MountFlags::RDONLY;
                         FilesystemType::Manual("squashfs")
                     };
                 }
+                loopback = Some(mount_loopback(source)?);
             }
 
             let source = match loopback {
                 Some(ref loopback) => {
                     let path = loopback.path().expect("loopback does not have path");
-                    flags |= MountFlags::RDONLY;
                     let cstr = to_cstring(path.as_os_str().as_bytes())?;
                     loop_path = Some(path);
                     cstr
@@ -314,18 +312,9 @@ fn mount_(
 }
 
 fn mount_loopback(source: &Path) -> io::Result<LoopDevice> {
-    let image = File::open(source)?;
     let loopback = LoopControl::open().and_then(|ctrl| ctrl.next_free())?;
-    associate_loopback(&image, &loopback)?;
+    loopback.attach_with_offset(source, 0)?;
     Ok(loopback)
-}
-
-fn associate_loopback<I: AsRawFd, L: AsRawFd>(iso: &I, loopback: &L) -> io::Result<()> {
-    if unsafe { ioctl(loopback.as_raw_fd(), LOOP_SET_FD, iso.as_raw_fd()) } < 0 {
-        Err(io::Error::last_os_error())
-    } else {
-        Ok(())
-    }
 }
 
 /// An abstraction that will ensure that temporary mounts are dropped in reverse.

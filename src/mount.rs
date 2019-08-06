@@ -11,7 +11,7 @@ use umount::{unmount_, Unmount, UnmountDrop, UnmountFlags};
 
 bitflags! {
     /// Flags which may be specified when mounting a file system.
-    pub struct MountFlags: u64 {
+    pub struct MountFlags: c_ulong {
         /// Perform a bind mount, making a file or a directory subtree visible at another
         /// point within a file system. Bind mounts may cross file system boundaries and
         /// span chroot(2) jails. The filesystemtype and data arguments are ignored. Up

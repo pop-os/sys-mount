@@ -6,7 +6,7 @@ use std::io::{self, BufRead, BufReader};
 #[derive(Clone, Debug)]
 pub struct SupportedFilesystems {
     nodev: Vec<bool>,
-    fs: Vec<String>
+    fs: Vec<String>,
 }
 
 impl SupportedFilesystems {
@@ -20,25 +20,26 @@ impl SupportedFilesystems {
             let (nodev, fs) = match (line.next(), line.next()) {
                 (Some(fs), None) => (false, fs),
                 (Some("nodev"), Some(fs)) => (true, fs),
-                _ => {
-                    continue
-                }
+                _ => continue,
             };
 
             nodevs.push(nodev);
             fss.push(fs.to_owned());
         }
 
-        Ok(SupportedFilesystems { nodev: nodevs, fs: fss })
+        Ok(SupportedFilesystems {
+            nodev: nodevs,
+            fs: fss,
+        })
     }
 
     /// Check if a provided file system is valid on this system.
-    /// 
+    ///
     /// ```rust
     /// extern crate sys_mount;
-    /// 
+    ///
     /// use sys_mount::SupportedFilesystems;
-    /// 
+    ///
     /// fn main() {
     ///     let supports = SupportedFilesystems::new().unwrap();
     ///     println!("btrfs is {}", if supports.is_supported("btrfs") {
@@ -55,26 +56,28 @@ impl SupportedFilesystems {
     /// Iterate through file systems which are not associated with physical devices.
     pub fn nodev_file_systems<'a>(&'a self) -> Box<Iterator<Item = &str> + 'a> {
         // TODO: When we can, switch to `impl Iterator`.
-        let iter = self.nodev.iter().enumerate()
-            .flat_map(move |(id, &x)| if x {
+        let iter = self.nodev.iter().enumerate().flat_map(move |(id, &x)| {
+            if x {
                 Some(self.fs[id].as_str())
             } else {
                 None
-            });
-        
+            }
+        });
+
         Box::new(iter)
     }
 
     /// Iterate through file systems which are associated with physical devices.
     pub fn dev_file_systems<'a>(&'a self) -> Box<Iterator<Item = &str> + 'a> {
         // TODO: When we can, switch to `impl Iterator`.
-        let iter = self.nodev.iter().enumerate()
-            .flat_map(move |(id, &x)| if !x {
+        let iter = self.nodev.iter().enumerate().flat_map(move |(id, &x)| {
+            if !x {
                 Some(self.fs[id].as_str())
             } else {
                 None
-            });
-        
+            }
+        });
+
         Box::new(iter)
     }
 }

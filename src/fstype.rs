@@ -13,19 +13,13 @@ pub enum FilesystemType<'a> {
 }
 
 impl<'a> From<&'a SupportedFilesystems> for FilesystemType<'a> {
-    fn from(s: &'a SupportedFilesystems) -> Self {
-        FilesystemType::Auto(s)
-    }
+    fn from(s: &'a SupportedFilesystems) -> Self { FilesystemType::Auto(s) }
 }
 
 impl<'a> From<&'a str> for FilesystemType<'a> {
-    fn from(s: &'a str) -> Self {
-        FilesystemType::Manual(s)
-    }
+    fn from(s: &'a str) -> Self { FilesystemType::Manual(s) }
 }
 
 impl<'a> From<&'a [&'a str]> for FilesystemType<'a> {
-    fn from(s: &'a [&'a str]) -> Self {
-        FilesystemType::Set(s)
-    }
+    fn from(s: &'a [&'a str]) -> Self { FilesystemType::Set(s) }
 }

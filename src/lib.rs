@@ -54,17 +54,16 @@ mod mount;
 mod supported;
 mod umount;
 
-pub use self::fstype::*;
-pub use self::mount::*;
-pub use self::supported::*;
-pub use self::umount::*;
+pub use self::{fstype::*, mount::*, supported::*, umount::*};
 
 use libc::swapoff as c_swapoff;
-use std::ffi::CString;
-use std::io::{self, Error, ErrorKind};
-use std::os::unix::ffi::OsStrExt;
-use std::path::Path;
-use std::ptr;
+use std::{
+    ffi::CString,
+    io::{self, Error, ErrorKind},
+    os::unix::ffi::OsStrExt,
+    path::Path,
+    ptr,
+};
 
 /// Unmounts a swap partition using `libc::swapoff`
 pub fn swapoff<P: AsRef<Path>>(dest: P) -> io::Result<()> {
@@ -88,9 +87,6 @@ pub fn swapoff<P: AsRef<Path>>(dest: P) -> io::Result<()> {
 
 fn to_cstring(data: &[u8]) -> io::Result<CString> {
     CString::new(data).map_err(|why| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("failed to create `CString`: {}", why),
-        )
+        io::Error::new(io::ErrorKind::InvalidData, format!("failed to create `CString`: {}", why))
     })
 }

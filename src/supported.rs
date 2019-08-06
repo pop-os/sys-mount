@@ -1,12 +1,14 @@
-use std::fs::File;
-use std::io::{self, BufRead, BufReader};
+use std::{
+    fs::File,
+    io::{self, BufRead, BufReader},
+};
 
 /// Data structure for validating if a filesystem argument is valid, and used within
 /// automatic file system mounting.
 #[derive(Clone, Debug)]
 pub struct SupportedFilesystems {
     nodev: Vec<bool>,
-    fs: Vec<String>,
+    fs:    Vec<String>,
 }
 
 impl SupportedFilesystems {
@@ -27,10 +29,7 @@ impl SupportedFilesystems {
             fss.push(fs.to_owned());
         }
 
-        Ok(SupportedFilesystems {
-            nodev: nodevs,
-            fs: fss,
-        })
+        Ok(SupportedFilesystems { nodev: nodevs, fs: fss })
     }
 
     /// Check if a provided file system is valid on this system.
@@ -49,9 +48,7 @@ impl SupportedFilesystems {
     ///     });
     /// }
     /// ```
-    pub fn is_supported(&self, fs: &str) -> bool {
-        self.fs.iter().any(|s| s.as_str() == fs)
-    }
+    pub fn is_supported(&self, fs: &str) -> bool { self.fs.iter().any(|s| s.as_str() == fs) }
 
     /// Iterate through file systems which are not associated with physical devices.
     pub fn nodev_file_systems<'a>(&'a self) -> Box<Iterator<Item = &str> + 'a> {

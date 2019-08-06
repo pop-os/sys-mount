@@ -2,11 +2,13 @@ use super::to_cstring;
 use fstype::FilesystemType;
 use libc::*;
 use loopdev::{LoopControl, LoopDevice};
-use std::ffi::CString;
-use std::io;
-use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
-use std::ptr;
+use std::{
+    ffi::CString,
+    io,
+    os::unix::ffi::OsStrExt,
+    path::{Path, PathBuf},
+    ptr,
+};
 use umount::{unmount_, Unmount, UnmountDrop, UnmountFlags};
 
 bitflags! {
@@ -95,8 +97,8 @@ bitflags! {
 pub struct Mount {
     pub(crate) target: CString,
     pub(crate) fstype: String,
-    loopback: Option<LoopDevice>,
-    loop_path: Option<PathBuf>,
+    loopback:          Option<LoopDevice>,
+    loop_path:         Option<PathBuf>,
 }
 
 impl Unmount for Mount {
@@ -152,8 +154,9 @@ impl Mount {
     /// If the input is a `&SupportedFilesystems`, then the file system will be selected
     /// automatically from the list.
     ///
-    /// The automatic variant of `fstype` works by attempting to mount the `source` with all supported
-    /// device-based file systems until it succeeds, or fails after trying all possible options.
+    /// The automatic variant of `fstype` works by attempting to mount the `source` with all
+    /// supported device-based file systems until it succeeds, or fails after trying all
+    /// possible options.
     pub fn new<'a, S, T, F>(
         source: S,
         target: T,
@@ -211,12 +214,7 @@ impl Mount {
         };
 
         let data = c_data.as_ref().map_or(ptr::null(), |d| d.as_ptr()) as *const c_void;
-        let mut mount_data = MountData {
-            c_source,
-            c_target,
-            flags,
-            data,
-        };
+        let mut mount_data = MountData { c_source, c_target, flags, data };
 
         let mut res = match fstype {
             FilesystemType::Auto(supported) => mount_data.automount(supported.dev_file_systems()),
@@ -248,32 +246,24 @@ impl Mount {
     /// Describes the file system which this mount was mounted with.
     ///
     /// This is useful in the event that the mounted device was mounted automatically.
-    pub fn get_fstype(&self) -> &str {
-        &self.fstype
-    }
+    pub fn get_fstype(&self) -> &str { &self.fstype }
 }
 
 struct MountData {
     c_source: Option<CString>,
     c_target: CString,
-    flags: MountFlags,
-    data: *const c_void,
+    flags:    MountFlags,
+    data:     *const c_void,
 }
 
 impl MountData {
     fn mount(&mut self, fstype: &str) -> io::Result<Mount> {
         let c_fstype = to_cstring(fstype.as_bytes())?;
-        match mount_(
-            self.c_source.as_ref(),
-            &self.c_target,
-            &c_fstype,
-            self.flags,
-            self.data,
-        ) {
+        match mount_(self.c_source.as_ref(), &self.c_target, &c_fstype, self.flags, self.data) {
             Ok(()) => Ok(Mount {
-                target: self.c_target.clone(),
-                fstype: fstype.to_owned(),
-                loopback: None,
+                target:    self.c_target.clone(),
+                fstype:    fstype.to_owned(),
+                loopback:  None,
                 loop_path: None,
             }),
             Err(why) => Err(why),
@@ -291,10 +281,9 @@ impl MountData {
         }
 
         match res {
-            Ok(()) => Err(io::Error::new(
-                io::ErrorKind::NotFound,
-                "no supported file systems found",
-            )),
+            Ok(()) => {
+                Err(io::Error::new(io::ErrorKind::NotFound, "no supported file systems found"))
+            }
             Err(why) => Err(why),
         }
     }

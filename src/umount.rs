@@ -1,10 +1,5 @@
 use libc::*;
-use std::ffi::CString;
-use std::io;
-use std::ops::Deref;
-use std::os::unix::ffi::OsStrExt;
-use std::path::Path;
-use std::ptr;
+use std::{ffi::CString, io, ops::Deref, os::unix::ffi::OsStrExt, path::Path, ptr};
 
 /// Unmount trait which enables any type that implements it to be upgraded into an `UnmountDrop`.
 pub trait Unmount {
@@ -31,22 +26,17 @@ pub struct UnmountDrop<T: Unmount> {
 
 impl<T: Unmount> UnmountDrop<T> {
     /// Modify the previously-set unmount flags.
-    pub fn set_unmount_flags(&mut self, flags: UnmountFlags) {
-        self.flags = flags;
-    }
+    pub fn set_unmount_flags(&mut self, flags: UnmountFlags) { self.flags = flags; }
 }
 
 impl<T: Unmount> Deref for UnmountDrop<T> {
     type Target = T;
-    fn deref(&self) -> &T {
-        &self.mount
-    }
+
+    fn deref(&self) -> &T { &self.mount }
 }
 
 impl<T: Unmount> Drop for UnmountDrop<T> {
-    fn drop(&mut self) {
-        let _ = self.mount.unmount(self.flags);
-    }
+    fn drop(&mut self) { let _ = self.mount.unmount(self.flags); }
 }
 
 bitflags! {
@@ -92,10 +82,7 @@ bitflags! {
 /// ```
 pub fn unmount<P: AsRef<Path>>(path: P, flags: UnmountFlags) -> io::Result<()> {
     let mount = CString::new(path.as_ref().as_os_str().as_bytes().to_owned());
-    let mount_ptr = mount
-        .as_ref()
-        .ok()
-        .map_or(ptr::null(), |cstr| cstr.as_ptr());
+    let mount_ptr = mount.as_ref().ok().map_or(ptr::null(), |cstr| cstr.as_ptr());
 
     unsafe { unmount_(mount_ptr, flags) }
 }

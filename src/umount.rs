@@ -51,7 +51,7 @@ impl<T: Unmount> Drop for UnmountDrop<T> {
 
 bitflags! {
     /// Flags which may be specified when unmounting a file system.
-    pub struct UnmountFlags: i32 {
+    pub struct UnmountFlags: c_int {
         /// Force unmount even if busy. This can cause data loss. (Only for NFS mounts.)
         const FORCE = MNT_FORCE;
 

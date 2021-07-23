@@ -15,7 +15,11 @@ maintenance = { status = "passively-maintained" }
 [dependencies]
 bitflags = "1.1"
 libc = "0.2"
-loopdev = "0.2.1"
+loopdev = { version = "0.2.1", optional = true }
+
+[features]
+default = ["loop"]
+loop = ["loopdev"]
 
 [dev-dependencies]
 clap = "2.33"

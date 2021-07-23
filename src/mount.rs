@@ -1,12 +1,11 @@
 use super::to_cstring;
 use fstype::FilesystemType;
 use libc::*;
-use loopdev::{LoopControl, LoopDevice};
 use std::{
     ffi::CString,
     io,
     os::unix::ffi::OsStrExt,
-    path::{Path, PathBuf},
+    path::Path,
     ptr,
 };
 use umount::{unmount_, Unmount, UnmountDrop, UnmountFlags};
@@ -97,17 +96,21 @@ bitflags! {
 pub struct Mount {
     pub(crate) target: CString,
     pub(crate) fstype: String,
-    loopback:          Option<LoopDevice>,
-    loop_path:         Option<PathBuf>,
+    #[cfg(feature = "loop")]
+    loopback:          Option<loopdev::LoopDevice>,
+    #[cfg(feature = "loop")]
+    loop_path:         Option<std::path::PathBuf>,
 }
 
 impl Unmount for Mount {
     fn unmount(&self, flags: UnmountFlags) -> io::Result<()> {
         unsafe {
             unmount_(self.target.as_ptr(), flags)?;
-            if let Some(ref loopback) = self.loopback {
-                loopback.detach()?;
-            }
+        }
+
+        #[cfg(feature = "loop")]
+        if let Some(ref loopback) = self.loopback {
+            loopback.detach()?;
         }
 
         Ok(())
@@ -145,9 +148,11 @@ impl Mount {
     ///
     /// The provided `source` device and `target` destinations must exist within the file system.
     ///
-    /// If the `source` is a file with an `iso` or `squashfs` extension, a loopback device will
-    /// be created, and the file will be associated with the loopback device. The `MountFlags`
-    /// will also be modified to ensure that the `MountFlags::RDONLY` flag is set before mounting.
+    /// If the `loop` feature is enabled, and the `source` is a file with an extension, a loopback
+    /// device will be created, and the file will be associated with the loopback device. If the
+    /// extension is `iso` or `squashfs`, the filesystem type will be set accordingly, and the
+    /// `MountFlags` will also be modified to ensure that the `MountFlags::RDONLY` flag is set
+    /// before mounting.
     ///
     /// The `fstype` parameter accepts either a `&str` or `&SupportedFilesystem` as input. If the
     /// input is a `&str`, then a particular file system will be used to mount the `source` with.
@@ -157,6 +162,7 @@ impl Mount {
     /// The automatic variant of `fstype` works by attempting to mount the `source` with all
     /// supported device-based file systems until it succeeds, or fails after trying all
     /// possible options.
+    #[cfg_attr(not(feature = "loop"), allow(unused_mut))]
     pub fn new<'a, S, T, F>(
         source: S,
         target: T,
@@ -170,12 +176,17 @@ impl Mount {
         F: Into<FilesystemType<'a>>,
     {
         let mut fstype = fstype.into();
+        let source = source.as_ref();
+        let mut c_source = None;
+
+        #[cfg(feature = "loop")]
         let mut loopback = None;
+        #[cfg(feature = "loop")]
         let mut loop_path = None;
 
-        let source = source.as_ref();
-        let c_source = if !source.as_os_str().is_empty() {
+        if !source.as_os_str().is_empty() {
             // Create a loopback device if an iso or squashfs is being mounted.
+            #[cfg(feature = "loop")]
             if let Some(ext) = source.extension() {
                 let extf = if ext == "iso" { 1 } else { 0 } | if ext == "squashfs" { 2 } else { 0 };
 
@@ -188,22 +199,18 @@ impl Mount {
                         FilesystemType::Manual("squashfs")
                     };
                 }
-                loopback = Some(mount_loopback(source)?);
+
+                let new_loopback = loopdev::LoopControl::open()?.next_free()?;
+                new_loopback.attach_with_offset(source, 0)?;
+                let path = new_loopback.path().expect("loopback does not have path");
+                c_source = Some(to_cstring(path.as_os_str().as_bytes())?);
+                loop_path = Some(path);
+                loopback = Some(new_loopback);
             }
 
-            let source = match loopback {
-                Some(ref loopback) => {
-                    let path = loopback.path().expect("loopback does not have path");
-                    let cstr = to_cstring(path.as_os_str().as_bytes())?;
-                    loop_path = Some(path);
-                    cstr
-                }
-                None => to_cstring(source.as_os_str().as_bytes())?,
-            };
-
-            Some(source)
-        } else {
-            None
+            if c_source.is_none() {
+                c_source = Some(to_cstring(source.as_os_str().as_bytes())?);
+            }
         };
 
         let c_target = to_cstring(target.as_ref().as_os_str().as_bytes())?;
@@ -222,6 +229,7 @@ impl Mount {
             FilesystemType::Manual(fstype) => mount_data.mount(fstype),
         };
 
+        #[cfg(feature = "loop")]
         match res {
             Ok(ref mut mount) => {
                 mount.loopback = loopback;
@@ -239,6 +247,7 @@ impl Mount {
 
     /// If the device was associated with a loopback device, that device's path
     /// can be retrieved here.
+    #[cfg(feature = "loop")]
     pub fn backing_loop_device(&self) -> Option<&Path> {
         self.loop_path.as_ref().map(|p| p.as_path())
     }
@@ -247,6 +256,21 @@ impl Mount {
     ///
     /// This is useful in the event that the mounted device was mounted automatically.
     pub fn get_fstype(&self) -> &str { &self.fstype }
+
+    #[cfg(feature = "loop")]
+    fn from_target_and_fstype(target: CString, fstype: String) -> Self {
+        Mount {
+            target: target,
+            fstype: fstype,
+            loopback: None,
+            loop_path: None,
+        }
+    }
+
+    #[cfg(not(feature = "loop"))]
+    fn from_target_and_fstype(target: CString, fstype: String) -> Self {
+        Mount { target: target, fstype: fstype }
+    }
 }
 
 struct MountData {
@@ -260,12 +284,7 @@ impl MountData {
     fn mount(&mut self, fstype: &str) -> io::Result<Mount> {
         let c_fstype = to_cstring(fstype.as_bytes())?;
         match mount_(self.c_source.as_ref(), &self.c_target, &c_fstype, self.flags, self.data) {
-            Ok(()) => Ok(Mount {
-                target:    self.c_target.clone(),
-                fstype:    fstype.to_owned(),
-                loopback:  None,
-                loop_path: None,
-            }),
+            Ok(()) => Ok(Mount::from_target_and_fstype(self.c_target.clone(), fstype.to_owned())),
             Err(why) => Err(why),
         }
     }
@@ -310,12 +329,6 @@ fn mount_(
         0 => Ok(()),
         _err => Err(io::Error::last_os_error()),
     }
-}
-
-fn mount_loopback(source: &Path) -> io::Result<LoopDevice> {
-    let loopback = LoopControl::open().and_then(|ctrl| ctrl.next_free())?;
-    loopback.attach_with_offset(source, 0)?;
-    Ok(loopback)
 }
 
 /// An abstraction that will ensure that temporary mounts are dropped in reverse.

@@ -51,7 +51,7 @@ impl SupportedFilesystems {
     pub fn is_supported(&self, fs: &str) -> bool { self.fs.iter().any(|s| s.as_str() == fs) }
 
     /// Iterate through file systems which are not associated with physical devices.
-    pub fn nodev_file_systems<'a>(&'a self) -> Box<Iterator<Item = &str> + 'a> {
+    pub fn nodev_file_systems<'a>(&'a self) -> Box<dyn Iterator<Item = &str> + 'a> {
         // TODO: When we can, switch to `impl Iterator`.
         let iter = self.nodev.iter().enumerate().flat_map(move |(id, &x)| {
             if x {
@@ -65,7 +65,7 @@ impl SupportedFilesystems {
     }
 
     /// Iterate through file systems which are associated with physical devices.
-    pub fn dev_file_systems<'a>(&'a self) -> Box<Iterator<Item = &str> + 'a> {
+    pub fn dev_file_systems<'a>(&'a self) -> Box<dyn Iterator<Item = &str> + 'a> {
         // TODO: When we can, switch to `impl Iterator`.
         let iter = self.nodev.iter().enumerate().flat_map(move |(id, &x)| {
             if !x {

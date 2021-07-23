@@ -314,7 +314,7 @@ fn mount_(
 
 fn mount_loopback(source: &Path) -> io::Result<LoopDevice> {
     let loopback = LoopControl::open().and_then(|ctrl| ctrl.next_free())?;
-    loopback.attach_with_offset(source, 0)?;
+    loopback.attach_file(source)?;
     Ok(loopback)
 }
 

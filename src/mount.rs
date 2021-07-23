@@ -3,7 +3,7 @@ use fstype::FilesystemType;
 use libc::*;
 use loopdev::{LoopControl, LoopDevice};
 use std::{
-    ffi::CString,
+    ffi::{CString, OsStr},
     io,
     os::unix::ffi::OsStrExt,
     path::{Path, PathBuf},
@@ -247,6 +247,11 @@ impl Mount {
     ///
     /// This is useful in the event that the mounted device was mounted automatically.
     pub fn get_fstype(&self) -> &str { &self.fstype }
+
+    /// Return the path this mount was mounted on.
+    pub fn target_path(&self) -> &Path {
+        Path::new(OsStr::from_bytes(self.target.as_bytes()))
+    }
 }
 
 struct MountData {

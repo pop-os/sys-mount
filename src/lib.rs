@@ -1,7 +1,7 @@
 //! High level abstraction over the `mount` and `umount2` system calls.
 //!
-//! Additionally creates loopback devices automatically when mounting an iso or
-//! squashfs file.
+//! If the `loop` feature is enabled (default), additionally supports creating loopback devices
+//! automatically when mounting an iso or squashfs file.
 //!
 //! # Example
 //!
@@ -45,6 +45,7 @@
 //! }
 
 extern crate libc;
+#[cfg(feature = "loop")]
 extern crate loopdev;
 #[macro_use]
 extern crate bitflags;

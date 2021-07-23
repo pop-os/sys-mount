@@ -201,7 +201,7 @@ impl Mount {
                 }
 
                 let new_loopback = loopdev::LoopControl::open()?.next_free()?;
-                new_loopback.attach_with_offset(source, 0)?;
+                new_loopback.attach_file(source)?;
                 let path = new_loopback.path().expect("loopback does not have path");
                 c_source = Some(to_cstring(path.as_os_str().as_bytes())?);
                 loop_path = Some(path);

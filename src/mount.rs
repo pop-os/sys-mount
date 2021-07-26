@@ -258,24 +258,15 @@ impl Mount {
     pub fn get_fstype(&self) -> &str { &self.fstype }
 
     /// Return the path this mount was mounted on.
-    pub fn target_path(&self) -> &Path {
-        Path::new(OsStr::from_bytes(self.target.as_bytes()))
-    }
+    pub fn target_path(&self) -> &Path { Path::new(OsStr::from_bytes(self.target.as_bytes())) }
 
     #[cfg(feature = "loop")]
     fn from_target_and_fstype(target: CString, fstype: String) -> Self {
-        Mount {
-            target: target,
-            fstype: fstype,
-            loopback: None,
-            loop_path: None,
-        }
+        Mount { target, fstype, loopback: None, loop_path: None }
     }
 
     #[cfg(not(feature = "loop"))]
-    fn from_target_and_fstype(target: CString, fstype: String) -> Self {
-        Mount { target: target, fstype: fstype }
-    }
+    fn from_target_and_fstype(target: CString, fstype: String) -> Self { Mount { target, fstype } }
 }
 
 struct MountData {

@@ -6,8 +6,6 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! extern crate sys_mount;
-//!
 //! use std::process::exit;
 //! use sys_mount::{
 //!     Mount,
@@ -43,12 +41,6 @@
 //!         }
 //!     }
 //! }
-
-extern crate libc;
-#[cfg(feature = "loop")]
-extern crate loopdev;
-#[macro_use]
-extern crate bitflags;
 
 mod fstype;
 mod mount;

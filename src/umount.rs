@@ -39,7 +39,7 @@ impl<T: Unmount> Drop for UnmountDrop<T> {
     fn drop(&mut self) { let _ = self.mount.unmount(self.flags); }
 }
 
-bitflags! {
+bitflags::bitflags! {
     /// Flags which may be specified when unmounting a file system.
     pub struct UnmountFlags: c_int {
         /// Force unmount even if busy. This can cause data loss. (Only for NFS mounts.)
@@ -71,8 +71,6 @@ bitflags! {
 /// querying loopback device info.
 ///
 /// ```rust,no_run
-/// extern crate sys_mount;
-///
 /// use sys_mount::{unmount, UnmountFlags};
 ///
 /// fn main() {

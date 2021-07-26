@@ -1,4 +1,4 @@
-use supported::SupportedFilesystems;
+use crate::supported::SupportedFilesystems;
 
 /// Defines how the file system type should be derived for a mount -- auto or manual
 #[derive(Debug)]

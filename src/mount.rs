@@ -1,5 +1,3 @@
-use super::to_cstring;
-use fstype::FilesystemType;
 use libc::*;
 use std::{
     ffi::{CString, OsStr},
@@ -8,9 +6,14 @@ use std::{
     path::Path,
     ptr,
 };
-use umount::{unmount_, Unmount, UnmountDrop, UnmountFlags};
 
-bitflags! {
+use crate::{
+    to_cstring,
+    umount::{unmount_, Unmount, UnmountDrop, UnmountFlags},
+    FilesystemType,
+};
+
+bitflags::bitflags! {
     /// Flags which may be specified when mounting a file system.
     pub struct MountFlags: c_ulong {
         /// Perform a bind mount, making a file or a directory subtree visible at another
@@ -121,8 +124,6 @@ impl Mount {
     /// Mounts a file system at `source` to a `target` path in the system.
     ///
     /// ```rust,no_run
-    /// extern crate sys_mount;
-    ///
     /// use sys_mount::{
     ///     Mount,
     ///     MountFlags,

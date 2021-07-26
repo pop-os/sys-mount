@@ -1,6 +1,3 @@
-extern crate clap;
-extern crate sys_mount;
-
 use clap::{App, Arg};
 use std::process::exit;
 use sys_mount::{Mount, MountFlags, SupportedFilesystems};

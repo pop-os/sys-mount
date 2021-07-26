@@ -35,8 +35,6 @@ impl SupportedFilesystems {
     /// Check if a provided file system is valid on this system.
     ///
     /// ```rust
-    /// extern crate sys_mount;
-    ///
     /// use sys_mount::SupportedFilesystems;
     ///
     /// fn main() {

@@ -1,6 +1,6 @@
 [package]
 name = "sys-mount"
-version = "1.3.0"
+version = "1.4.0"
 description = "High level FFI binding around the sys mount & umount2 calls"
 repository = "https://github.com/pop-os/sys-mount"
 authors = ["Michael Aaron Murphy <mmstickman@gmail.com>"]
@@ -13,13 +13,15 @@ categories = ["external-ffi-bindings", "filesystem", "os::unix-apis"]
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-bitflags = "1.2"
+bitflags = "1"
 libc = "0.2"
 loopdev = { version = "0.3", optional = true }
+thiserror = "1.0"
+tracing = "0.1"
 
 [features]
 default = ["loop"]
 loop = ["loopdev"]
 
 [dev-dependencies]
-clap = "2.33"
+clap = "2.33.3"

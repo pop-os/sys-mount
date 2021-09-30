@@ -49,6 +49,8 @@ extern crate libc;
 extern crate loopdev;
 #[macro_use]
 extern crate bitflags;
+#[macro_use]
+extern crate thiserror;
 
 mod fstype;
 mod mount;
@@ -65,6 +67,34 @@ use std::{
     path::Path,
     ptr,
 };
+
+#[derive(Debug, Error)]
+pub enum ScopedMountError {
+    #[error("cannot get list of supported file systems")]
+    Supported(#[source] io::Error),
+    #[error("could not mount partition")]
+    Mount(#[source] io::Error),
+}
+
+/// Mount a partition temporarily for the duration of the scoped block within.
+pub fn scoped_mount<T, S: FnOnce() -> T>(
+    source: &Path,
+    mount_at: &Path,
+    scope: S,
+) -> Result<T, ScopedMountError> {
+    let supported = SupportedFilesystems::new().map_err(ScopedMountError::Supported)?;
+
+    Mount::new(&source, mount_at, &supported, MountFlags::empty(), None)
+        .map_err(ScopedMountError::Mount)?;
+
+    let result = scope();
+
+    if let Err(why) = unmount(mount_at, UnmountFlags::empty()) {
+        tracing::warn!("{}: failed to unmount: {}", mount_at.display(), why);
+    }
+
+    Ok(result)
+}
 
 /// Unmounts a swap partition using `libc::swapoff`
 pub fn swapoff<P: AsRef<Path>>(dest: P) -> io::Result<()> {

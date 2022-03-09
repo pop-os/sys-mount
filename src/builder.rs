@@ -10,7 +10,7 @@ use crate::*;
 ///
 /// fn main() -> std::io::Result<()> {
 ///     let _mount = Mount::builder()
-///         .fstype("btrfs".into())
+///         .fstype("btrfs")
 ///         .data("subvol=@home")
 ///         .mount("/dev/sda1", "/home")?;
 ///     Ok(())
@@ -32,8 +32,8 @@ impl<'a> MountBuilder<'a> {
     }
 
     /// The file system that is to be mounted.
-    pub fn fstype(mut self, fs: FilesystemType<'a>) -> Self {
-        self.fstype = Some(fs);
+    pub fn fstype(mut self, fs: impl Into<FilesystemType<'a>>) -> Self {
+        self.fstype = Some(fs.into());
         self
     }
 

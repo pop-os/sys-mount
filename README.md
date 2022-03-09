@@ -40,7 +40,11 @@ fn main() {
 
     // The source block will be mounted to the target directory, and the fstype is likely
     // one of the supported file systems.
-    match Mount::new(src, dir, &supported, MountFlags::empty(), None) {
+    let result = Mount::builder()
+        .fstype(FilesystemType::from(&supported))
+        .mount(src, dir);
+
+    match result {
         Ok(mount) => {
             println!("mounted {} ({}) to {}", src, mount.get_fstype(), dir);
         }

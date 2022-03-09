@@ -1,3 +1,6 @@
+// Copyright 2018-2022 System76 <info@system76.com>
+// SPDX-License-Identifier: MIT
+
 //! High level abstraction over the `mount` and `umount2` system calls.
 //!
 //! If the `loop` feature is enabled (default), additionally supports creating loopback devices

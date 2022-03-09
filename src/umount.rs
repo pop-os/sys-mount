@@ -1,3 +1,6 @@
+// Copyright 2018-2022 System76 <info@system76.com>
+// SPDX-License-Identifier: MIT
+
 use libc::*;
 use std::{ffi::CString, io, ops::Deref, os::unix::ffi::OsStrExt, path::Path, ptr};
 

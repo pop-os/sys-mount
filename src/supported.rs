@@ -1,3 +1,6 @@
+// Copyright 2018-2022 System76 <info@system76.com>
+// SPDX-License-Identifier: MIT
+
 use std::{
     fs::File,
     io::{self, BufRead, BufReader},

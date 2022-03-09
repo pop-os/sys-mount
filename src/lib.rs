@@ -52,12 +52,13 @@ extern crate bitflags;
 #[macro_use]
 extern crate thiserror;
 
+mod builder;
 mod fstype;
 mod mount;
 mod supported;
 mod umount;
 
-pub use self::{fstype::*, mount::*, supported::*, umount::*};
+pub use self::{builder::*, fstype::*, mount::*, supported::*, umount::*};
 
 use libc::swapoff as c_swapoff;
 use std::{

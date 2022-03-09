@@ -16,6 +16,7 @@ maintenance = { status = "passively-maintained" }
 bitflags = "1"
 libc = "0.2"
 loopdev = { version = "0.3", optional = true }
+smart-default = "0.6.0"
 thiserror = "1.0"
 tracing = "0.1"
 

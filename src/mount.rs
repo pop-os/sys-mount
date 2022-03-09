@@ -1,3 +1,5 @@
+use crate::MountBuilder;
+
 use super::to_cstring;
 use fstype::FilesystemType;
 use libc::*;
@@ -118,6 +120,15 @@ impl Unmount for Mount {
 }
 
 impl Mount {
+    /// Performs a mount with builder syntax.
+    ///
+    /// ```
+    ///
+    /// ```
+    pub fn builder<'a>() -> MountBuilder<'a> {
+        MountBuilder::default()
+    }
+
     /// Mounts a file system at `source` to a `target` path in the system.
     ///
     /// ```rust,no_run
@@ -214,13 +225,12 @@ impl Mount {
         };
 
         let c_target = to_cstring(target.as_ref().as_os_str().as_bytes())?;
-        let c_data = match data.map(|o| to_cstring(o.as_bytes())) {
+        let data = match data.map(|o| to_cstring(o.as_bytes())) {
             Some(Ok(string)) => Some(string),
             Some(Err(why)) => return Err(why),
             None => None,
         };
 
-        let data = c_data.as_ref().map_or(ptr::null(), |d| d.as_ptr()) as *const c_void;
         let mut mount_data = MountData { c_source, c_target, flags, data };
 
         let mut res = match fstype {
@@ -249,7 +259,7 @@ impl Mount {
     /// can be retrieved here.
     #[cfg(feature = "loop")]
     pub fn backing_loop_device(&self) -> Option<&Path> {
-        self.loop_path.as_ref().map(|p| p.as_path())
+        self.loop_path.as_deref()
     }
 
     /// Describes the file system which this mount was mounted with.
@@ -265,8 +275,8 @@ impl Mount {
     #[cfg(feature = "loop")]
     fn from_target_and_fstype(target: CString, fstype: String) -> Self {
         Mount {
-            target: target,
-            fstype: fstype,
+            target,
+            fstype,
             loopback: None,
             loop_path: None,
         }
@@ -282,13 +292,13 @@ struct MountData {
     c_source: Option<CString>,
     c_target: CString,
     flags:    MountFlags,
-    data:     *const c_void,
+    data:     Option<CString>,
 }
 
 impl MountData {
     fn mount(&mut self, fstype: &str) -> io::Result<Mount> {
         let c_fstype = to_cstring(fstype.as_bytes())?;
-        match mount_(self.c_source.as_ref(), &self.c_target, &c_fstype, self.flags, self.data) {
+        match mount_(self.c_source.as_ref(), &self.c_target, &c_fstype, self.flags, self.data.as_ref()) {
             Ok(()) => Ok(Mount::from_target_and_fstype(self.c_target.clone(), fstype.to_owned())),
             Err(why) => Err(why),
         }
@@ -318,7 +328,7 @@ fn mount_(
     c_target: &CString,
     c_fstype: &CString,
     flags: MountFlags,
-    c_data: *const c_void,
+    c_data: Option<&CString>,
 ) -> io::Result<()> {
     let result = unsafe {
         mount(
@@ -326,7 +336,7 @@ fn mount_(
             c_target.as_ptr(),
             c_fstype.as_ptr(),
             flags.bits(),
-            c_data,
+            c_data.map_or_else(ptr::null, |s| s.as_ptr()) as *const c_void,
         )
     };
 
@@ -340,10 +350,9 @@ fn mount_(
 pub struct Mounts(pub Vec<UnmountDrop<Mount>>);
 
 impl Mounts {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn unmount(&mut self, lazy: bool) -> io::Result<()> {
         let flags = if lazy { UnmountFlags::DETACH } else { UnmountFlags::empty() };
-        self.0.iter_mut().rev().map(|mount| mount.unmount(flags)).collect()
+        self.0.iter_mut().rev().try_for_each(|mount| mount.unmount(flags))
     }
 }
 

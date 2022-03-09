@@ -99,9 +99,9 @@ pub struct Mount {
     pub(crate) target: CString,
     pub(crate) fstype: String,
     #[cfg(feature = "loop")]
-    loopback:          Option<loopdev::LoopDevice>,
+    loopback: Option<loopdev::LoopDevice>,
     #[cfg(feature = "loop")]
-    loop_path:         Option<std::path::PathBuf>,
+    loop_path: Option<std::path::PathBuf>,
 }
 
 impl Unmount for Mount {
@@ -231,7 +231,12 @@ impl Mount {
             None => None,
         };
 
-        let mut mount_data = MountData { c_source, c_target, flags, data };
+        let mut mount_data = MountData {
+            c_source,
+            c_target,
+            flags,
+            data,
+        };
 
         let mut res = match fstype {
             FilesystemType::Auto(supported) => mount_data.automount(supported.dev_file_systems()),
@@ -265,7 +270,9 @@ impl Mount {
     /// Describes the file system which this mount was mounted with.
     ///
     /// This is useful in the event that the mounted device was mounted automatically.
-    pub fn get_fstype(&self) -> &str { &self.fstype }
+    pub fn get_fstype(&self) -> &str {
+        &self.fstype
+    }
 
     /// Return the path this mount was mounted on.
     pub fn target_path(&self) -> &Path {
@@ -284,22 +291,31 @@ impl Mount {
 
     #[cfg(not(feature = "loop"))]
     fn from_target_and_fstype(target: CString, fstype: String) -> Self {
-        Mount { target: target, fstype: fstype }
+        Mount { target, fstype }
     }
 }
 
 struct MountData {
     c_source: Option<CString>,
     c_target: CString,
-    flags:    MountFlags,
-    data:     Option<CString>,
+    flags: MountFlags,
+    data: Option<CString>,
 }
 
 impl MountData {
     fn mount(&mut self, fstype: &str) -> io::Result<Mount> {
         let c_fstype = to_cstring(fstype.as_bytes())?;
-        match mount_(self.c_source.as_ref(), &self.c_target, &c_fstype, self.flags, self.data.as_ref()) {
-            Ok(()) => Ok(Mount::from_target_and_fstype(self.c_target.clone(), fstype.to_owned())),
+        match mount_(
+            self.c_source.as_ref(),
+            &self.c_target,
+            &c_fstype,
+            self.flags,
+            self.data.as_ref(),
+        ) {
+            Ok(()) => Ok(Mount::from_target_and_fstype(
+                self.c_target.clone(),
+                fstype.to_owned(),
+            )),
             Err(why) => Err(why),
         }
     }
@@ -315,9 +331,10 @@ impl MountData {
         }
 
         match res {
-            Ok(()) => {
-                Err(io::Error::new(io::ErrorKind::NotFound, "no supported file systems found"))
-            }
+            Ok(()) => Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "no supported file systems found",
+            )),
             Err(why) => Err(why),
         }
     }
@@ -351,8 +368,15 @@ pub struct Mounts(pub Vec<UnmountDrop<Mount>>);
 
 impl Mounts {
     pub fn unmount(&mut self, lazy: bool) -> io::Result<()> {
-        let flags = if lazy { UnmountFlags::DETACH } else { UnmountFlags::empty() };
-        self.0.iter_mut().rev().try_for_each(|mount| mount.unmount(flags))
+        let flags = if lazy {
+            UnmountFlags::DETACH
+        } else {
+            UnmountFlags::empty()
+        };
+        self.0
+            .iter_mut()
+            .rev()
+            .try_for_each(|mount| mount.unmount(flags))
     }
 }
 

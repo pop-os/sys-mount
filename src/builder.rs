@@ -45,7 +45,11 @@ impl<'a> MountBuilder<'a> {
 
     /// Mount the `source` to the `target`.
     pub fn mount(self, source: impl AsRef<Path>, target: impl AsRef<Path>) -> io::Result<Mount> {
-        let MountBuilder { data, fstype, flags } = self;
+        let MountBuilder {
+            data,
+            fstype,
+            flags,
+        } = self;
 
         let supported;
 
@@ -67,6 +71,7 @@ impl<'a> MountBuilder<'a> {
         target: impl AsRef<Path>,
         unmount_flags: UnmountFlags,
     ) -> io::Result<UnmountDrop<Mount>> {
-        self.mount(source, target).map(|m| m.into_unmount_drop(unmount_flags))
+        self.mount(source, target)
+            .map(|m| m.into_unmount_drop(unmount_flags))
     }
 }

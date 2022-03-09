@@ -13,8 +13,11 @@ fn main() {
 
     let src = matches.value_of("source").unwrap();
 
-    let flags =
-        if matches.is_present("lazy") { UnmountFlags::DETACH } else { UnmountFlags::empty() };
+    let flags = if matches.is_present("lazy") {
+        UnmountFlags::DETACH
+    } else {
+        UnmountFlags::empty()
+    };
 
     match unmount(src, flags) {
         Ok(()) => (),

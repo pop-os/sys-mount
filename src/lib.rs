@@ -119,6 +119,9 @@ pub fn swapoff<P: AsRef<Path>>(dest: P) -> io::Result<()> {
 
 fn to_cstring(data: &[u8]) -> io::Result<CString> {
     CString::new(data).map_err(|why| {
-        io::Error::new(io::ErrorKind::InvalidData, format!("failed to create `CString`: {}", why))
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("failed to create `CString`: {}", why),
+        )
     })
 }

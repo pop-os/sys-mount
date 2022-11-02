@@ -182,6 +182,7 @@ impl Mount {
         target: T,
         fstype: F,
         mut flags: MountFlags,
+        loopback_offset: Option<u64>,
         data: Option<&str>,
     ) -> io::Result<Self>
     where
@@ -218,6 +219,7 @@ impl Mount {
                 new_loopback
                     .with()
                     .read_only(flags.contains(MountFlags::RDONLY))
+                    .offset(loopback_offset.unwrap_or(0u64))
                     .attach(source)?;
                 let path = new_loopback.path().expect("loopback does not have path");
                 c_source = Some(to_cstring(path.as_os_str().as_bytes())?);

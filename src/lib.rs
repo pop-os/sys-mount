@@ -88,7 +88,7 @@ pub fn scoped_mount<T, S: FnOnce() -> T>(
 ) -> Result<T, ScopedMountError> {
     let supported = SupportedFilesystems::new().map_err(ScopedMountError::Supported)?;
 
-    Mount::new(&source, mount_at, &supported, MountFlags::empty(), None)
+    Mount::new(&source, mount_at, &supported, MountFlags::empty(), None, None)
         .map_err(ScopedMountError::Mount)?;
 
     let result = scope();

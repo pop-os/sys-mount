@@ -21,6 +21,7 @@ pub struct MountBuilder<'a> {
     #[default(MountFlags::empty())]
     flags: MountFlags,
     fstype: Option<FilesystemType<'a>>,
+    loopback_offset: Option<u64>,
     data: Option<&'a str>,
 }
 
@@ -43,12 +44,20 @@ impl<'a> MountBuilder<'a> {
         self
     }
 
+    ///Offset for the loopback device
+    #[cfg(feature = "loop")]
+    pub fn loopback_offset(mut self, offset: u64) -> Self {
+        self.loopback_offset = Some(offset);
+        self
+    }
+
     /// Mount the `source` to the `target`.
     pub fn mount(self, source: impl AsRef<Path>, target: impl AsRef<Path>) -> io::Result<Mount> {
         let MountBuilder {
             data,
             fstype,
             flags,
+            loopback_offset,
         } = self;
 
         let supported;
@@ -61,7 +70,7 @@ impl<'a> MountBuilder<'a> {
             }
         };
 
-        Mount::new(source, target, fstype, flags, data)
+        Mount::new(source, target, fstype, flags, loopback_offset, data)
     }
 
     /// Perform a mount which auto-unmounts on drop.

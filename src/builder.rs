@@ -76,7 +76,7 @@ impl<'a> MountBuilder<'a> {
     ///
     /// // Attempt to mount the src device to the dest directory.
     /// let mount_result = Mount::builder()
-    ///     .fs_type(&supported)
+    ///     .fstype(&supported)
     ///     .mount("/imaginary/block/device", "/tmp/location");
     /// ```
     /// # Notes

@@ -1,9 +1,9 @@
 [package]
 name = "sys-mount"
-version = "2.0.0"
+version = "2.0.1"
 description = "High level FFI binding around the sys mount & umount2 calls"
 repository = "https://github.com/pop-os/sys-mount"
-authors = ["Michael Aaron Murphy <mmstick@pm.me>"]
+authors = ["Michael Aaron Murphy <michael@mmurphy.dev>"]
 license = "MIT OR Apache-2.0"
 keywords = ["linux", "sys", "mount", "umount"]
 categories = ["external-ffi-bindings", "filesystem", "os::unix-apis"]

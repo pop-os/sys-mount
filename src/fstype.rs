@@ -1,7 +1,7 @@
 // Copyright 2018-2022 System76 <info@system76.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT OR Apache-2.0
 
-use supported::SupportedFilesystems;
+use crate::supported::SupportedFilesystems;
 
 /// Defines how the file system type should be derived for a mount -- auto or manual
 #[derive(Debug)]

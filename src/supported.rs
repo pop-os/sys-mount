@@ -1,5 +1,5 @@
 // Copyright 2018-2022 System76 <info@system76.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT OR Apache-2.0
 
 use std::{
     fs::File,
@@ -9,12 +9,18 @@ use std::{
 /// Data structure for validating if a filesystem argument is valid, and used within
 /// automatic file system mounting.
 #[derive(Clone, Debug)]
+#[allow(clippy::module_name_repetitions)]
 pub struct SupportedFilesystems {
     nodev: Vec<bool>,
     fs: Vec<String>,
 }
 
 impl SupportedFilesystems {
+    /// Detects available supported file systems on the system
+    ///
+    /// # Errors
+    ///
+    /// - On failure to open `/proc/filesystems`
     pub fn new() -> io::Result<Self> {
         let mut fss = Vec::with_capacity(64);
         let mut nodevs = Vec::with_capacity(64);
@@ -54,14 +60,16 @@ impl SupportedFilesystems {
     ///     });
     /// }
     /// ```
+    #[must_use]
     pub fn is_supported(&self, fs: &str) -> bool {
         self.fs.iter().any(|s| s.as_str() == fs)
     }
 
     /// Iterate through file systems which are not associated with physical devices.
+    #[must_use]
     pub fn nodev_file_systems<'a>(&'a self) -> Box<dyn Iterator<Item = &str> + 'a> {
         // TODO: When we can, switch to `impl Iterator`.
-        let iter = self.nodev.iter().enumerate().flat_map(move |(id, &x)| {
+        let iter = self.nodev.iter().enumerate().filter_map(move |(id, &x)| {
             if x {
                 Some(self.fs[id].as_str())
             } else {
@@ -73,13 +81,14 @@ impl SupportedFilesystems {
     }
 
     /// Iterate through file systems which are associated with physical devices.
+    #[must_use]
     pub fn dev_file_systems<'a>(&'a self) -> Box<dyn Iterator<Item = &str> + 'a> {
         // TODO: When we can, switch to `impl Iterator`.
-        let iter = self.nodev.iter().enumerate().flat_map(move |(id, &x)| {
-            if !x {
-                Some(self.fs[id].as_str())
-            } else {
+        let iter = self.nodev.iter().enumerate().filter_map(move |(id, &x)| {
+            if x {
                 None
+            } else {
+                Some(self.fs[id].as_str())
             }
         });
 

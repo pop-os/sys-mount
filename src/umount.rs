@@ -1,7 +1,8 @@
 // Copyright 2018-2022 System76 <info@system76.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT OR Apache-2.0
 
-use libc::*;
+use crate::UnmountFlags;
+use libc::{c_char, umount2};
 use std::{ffi::CString, io, ops::Deref, os::unix::ffi::OsStrExt, path::Path, ptr};
 
 /// Unmount trait which enables any type that implements it to be upgraded into an `UnmountDrop`.
@@ -10,6 +11,10 @@ pub trait Unmount {
     ///
     /// This will also detach the loopback device that the mount is assigned to, if
     /// it was associated with a loopback device.
+    ///
+    /// # Errors
+    ///
+    /// On failure to unmount
     fn unmount(&self, flags: UnmountFlags) -> io::Result<()>;
 
     /// Upgrades `Self` into an `UnmountDrop`, which will unmount the mount when it is dropped.
@@ -44,32 +49,7 @@ impl<T: Unmount> Deref for UnmountDrop<T> {
 
 impl<T: Unmount> Drop for UnmountDrop<T> {
     fn drop(&mut self) {
-        let _ = self.mount.unmount(self.flags);
-    }
-}
-
-bitflags! {
-    /// Flags which may be specified when unmounting a file system.
-    pub struct UnmountFlags: c_int {
-        /// Force unmount even if busy. This can cause data loss. (Only for NFS mounts.)
-        const FORCE = MNT_FORCE;
-
-        /// Perform a lazy unmount: make the mount point unavailable for new accesses,
-        /// and actually perform the unmount when the mount point ceases to be busy.
-        const DETACH = MNT_DETACH;
-
-        /// Mark the mount point as expired. If a mount point is not currently in use,
-        /// then an initial call to umount2() with this flag fails with the error EAGAIN,
-        /// but marks the mount point as expired. The mount point remains expired as
-        /// long as it isn't accessed by any process. A second umount2() call specifying
-        /// MNT_EXPIRE unmounts an expired mount point. This flag cannot be specified with
-        /// either MNT_FORCE or MNT_DETACH.
-        const EXPIRE = MNT_EXPIRE;
-
-        /// Don't dereference target if it is a symbolic link. This flag allows security
-        /// problems to be avoided in set-user-ID-root programs that allow unprivileged
-        /// users to unmount file systems.
-        const NOFOLLOW = O_NOFOLLOW;
+        let _res = self.mount.unmount(self.flags);
     }
 }
 
@@ -78,6 +58,13 @@ bitflags! {
 /// This will not detach a loopback device if the mount was attached to one. This behavior may
 /// change in the future, once the [loopdev](https://crates.io/crates/loopdev) crate supports
 /// querying loopback device info.
+///
+/// # Errors
+///
+/// - If the path is not a valid C String
+/// - Or the unmount function fails
+///
+/// # Example
 ///
 /// ```rust,no_run
 /// extern crate sys_mount;
@@ -99,6 +86,7 @@ pub fn unmount<P: AsRef<Path>>(path: P, flags: UnmountFlags) -> io::Result<()> {
     unsafe { unmount_(mount_ptr, flags) }
 }
 
+#[inline]
 pub(crate) unsafe fn unmount_(mount_ptr: *const c_char, flags: UnmountFlags) -> io::Result<()> {
     match umount2(mount_ptr, flags.bits()) {
         0 => Ok(()),

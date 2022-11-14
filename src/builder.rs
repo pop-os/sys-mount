@@ -3,8 +3,8 @@
 
 use super::to_cstring;
 use crate::{
-    io, libc, loopdev, CString, FilesystemType, Mount, MountFlags, OsStrExt, Path,
-    SupportedFilesystems, Unmount, UnmountDrop, UnmountFlags,
+    io, libc, CString, FilesystemType, Mount, MountFlags, OsStrExt, Path, SupportedFilesystems,
+    Unmount, UnmountDrop, UnmountFlags,
 };
 use libc::mount;
 use std::ptr;
@@ -28,6 +28,7 @@ pub struct MountBuilder<'a> {
     #[default(MountFlags::empty())]
     flags: MountFlags,
     fstype: Option<FilesystemType<'a>>,
+    #[cfg(feature = "loop")]
     loopback_offset: u64,
     data: Option<&'a str>,
 }
@@ -55,6 +56,7 @@ impl<'a> MountBuilder<'a> {
     }
 
     /// Offset for the loopback device
+    #[cfg(feature = "loop")]
     #[must_use]
     pub fn loopback_offset(mut self, offset: u64) -> Self {
         self.loopback_offset = offset;
@@ -107,13 +109,14 @@ impl<'a> MountBuilder<'a> {
         let MountBuilder {
             data,
             fstype,
-            mut flags,
+            flags,
+            #[cfg(feature = "loop")]
             loopback_offset,
         } = self;
 
         let supported;
 
-        let mut fstype = if let Some(fstype) = fstype {
+        let fstype = if let Some(fstype) = fstype {
             fstype
         } else {
             supported = SupportedFilesystems::new()?;
@@ -122,11 +125,13 @@ impl<'a> MountBuilder<'a> {
 
         let source = source.as_ref();
         let mut c_source = None;
-        let mut loopback = None;
-        let mut loop_path = None;
+
+        #[cfg(feature = "loop")]
+        let (mut flags, mut fstype, mut loopback, mut loop_path) = (flags, fstype, None, None);
 
         if !source.as_os_str().is_empty() {
             // Create a loopback device if an iso or squashfs is being mounted.
+            #[cfg(feature = "loop")]
             if let Some(ext) = source.extension() {
                 let extf = i32::from(ext == "iso") | if ext == "squashfs" { 2 } else { 0 };
 
@@ -178,11 +183,16 @@ impl<'a> MountBuilder<'a> {
         };
 
         match res {
-            Ok(ref mut mount) => {
-                mount.loopback = loopback;
-                mount.loop_path = loop_path;
+            Ok(ref mut _mount) => {
+                #[cfg(feature = "loop")]
+                {
+                    _mount.loopback = loopback;
+                    _mount.loop_path = loop_path;
+                }
             }
-            Err(_) => {
+            Err(_) =>
+            {
+                #[cfg(feature = "loop")]
                 if let Some(loopback) = loopback {
                     let _res = loopback.detach();
                 }

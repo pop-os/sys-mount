@@ -15,6 +15,7 @@ use std::{
 pub struct Mount {
     pub(crate) target: CString,
     pub(crate) fstype: String,
+    #[cfg(feature = "loop")]
     pub(crate) loopback: Option<loopdev::LoopDevice>,
     pub(crate) loop_path: Option<std::path::PathBuf>,
 }
@@ -25,6 +26,7 @@ impl Unmount for Mount {
             unmount_(self.target.as_ptr(), flags)?;
         }
 
+        #[cfg(feature = "loop")]
         if let Some(ref loopback) = self.loopback {
             loopback.detach()?;
         }
@@ -99,6 +101,7 @@ impl Mount {
         Mount {
             target,
             fstype,
+            #[cfg(feature = "loop")]
             loopback: None,
             loop_path: None,
         }

@@ -4,7 +4,7 @@
 use crate::supported::SupportedFilesystems;
 
 /// Defines how the file system type should be derived for a mount -- auto or manual
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum FilesystemType<'a> {
     /// The automatic variant will iterate through a list of pre-generated supported
     /// file systems, and attempt to mount each one before giving up.

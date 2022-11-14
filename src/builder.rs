@@ -22,7 +22,7 @@ use std::ptr;
 ///     Ok(())
 /// }
 /// ```
-#[derive(smart_default::SmartDefault)]
+#[derive(Clone, Copy, smart_default::SmartDefault)]
 #[allow(clippy::module_name_repetitions)]
 pub struct MountBuilder<'a> {
     #[default(MountFlags::empty())]

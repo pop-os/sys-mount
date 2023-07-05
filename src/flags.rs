@@ -3,8 +3,8 @@
 
 use libc::{
     c_int, c_ulong, MNT_DETACH, MNT_EXPIRE, MNT_FORCE, MS_BIND, MS_DIRSYNC, MS_MANDLOCK, MS_MOVE,
-    MS_NOATIME, MS_NODEV, MS_NODIRATIME, MS_NOEXEC, MS_NOSUID, MS_RDONLY, MS_RELATIME, MS_REMOUNT,
-    MS_SILENT, MS_STRICTATIME, MS_SYNCHRONOUS, O_NOFOLLOW,
+    MS_NOATIME, MS_NODEV, MS_NODIRATIME, MS_NOEXEC, MS_NOSUID, MS_RDONLY, MS_REC, MS_RELATIME,
+    MS_REMOUNT, MS_SILENT, MS_STRICTATIME, MS_SYNCHRONOUS, O_NOFOLLOW,
 };
 
 bitflags! {
@@ -50,6 +50,11 @@ bitflags! {
 
         /// Mount file system read-only.
         const RDONLY = MS_RDONLY;
+
+        /// Used in conjunction with MS_BIND to create a recursive bind mount, and in
+        /// conjunction with the propagation type flags to recursively change the propagation
+        /// type of all of the mounts in a subtree.
+        const REC = MS_REC;
 
         /// When a file on this file system is accessed, only update the file's last access
         /// time (atime) if the current value of atime is less than or equal to the file's

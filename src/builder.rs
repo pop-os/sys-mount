@@ -8,7 +8,6 @@ use crate::{
 };
 use libc::mount;
 use std::ptr;
-use loopdev::LoopDevice;
 
 /// Builder API for mounting devices
 ///
@@ -144,7 +143,7 @@ impl<'a> MountBuilder<'a> {
 
         if !source.as_os_str().is_empty() {
             #[cfg(feature = "loop")]
-            let mut create_loopback = |flags: &MountFlags| -> io::Result<LoopDevice> {
+            let mut create_loopback = |flags: &MountFlags| -> io::Result<loopdev::LoopDevice> {
                 let new_loopback = loopdev::LoopControl::open()?.next_free()?;
                 new_loopback
                     .with()

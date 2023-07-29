@@ -8,6 +8,7 @@ use crate::{
 };
 use libc::mount;
 use std::ptr;
+use loopdev::LoopDevice;
 
 /// Builder API for mounting devices
 ///
@@ -30,6 +31,8 @@ pub struct MountBuilder<'a> {
     fstype: Option<FilesystemType<'a>>,
     #[cfg(feature = "loop")]
     loopback_offset: u64,
+    #[cfg(feature = "loop")]
+    explicit_loopback: bool,
     data: Option<&'a str>,
 }
 
@@ -60,6 +63,14 @@ impl<'a> MountBuilder<'a> {
     #[must_use]
     pub fn loopback_offset(mut self, offset: u64) -> Self {
         self.loopback_offset = offset;
+        self
+    }
+
+    /// Use loopback even if not an iso or squashfs is being mounted
+    #[cfg(feature = "loop")]
+    #[must_use]
+    pub fn explicit_loopback(mut self) -> Self {
+        self.explicit_loopback = true;
         self
     }
 
@@ -112,6 +123,8 @@ impl<'a> MountBuilder<'a> {
             flags,
             #[cfg(feature = "loop")]
             loopback_offset,
+            #[cfg(feature = "loop")]
+            explicit_loopback,
         } = self;
 
         let supported;
@@ -130,6 +143,20 @@ impl<'a> MountBuilder<'a> {
         let (mut flags, mut fstype, mut loopback, mut loop_path) = (flags, fstype, None, None);
 
         if !source.as_os_str().is_empty() {
+            #[cfg(feature = "loop")]
+            let mut create_loopback = |flags: &MountFlags| -> io::Result<LoopDevice> {
+                let new_loopback = loopdev::LoopControl::open()?.next_free()?;
+                new_loopback
+                    .with()
+                    .read_only(flags.contains(MountFlags::RDONLY))
+                    .offset(loopback_offset)
+                    .attach(source)?;
+                let path = new_loopback.path().expect("loopback does not have path");
+                c_source = Some(to_cstring(path.as_os_str().as_bytes())?);
+                loop_path = Some(path);
+                Ok(new_loopback)
+            };
+
             // Create a loopback device if an iso or squashfs is being mounted.
             #[cfg(feature = "loop")]
             if let Some(ext) = source.extension() {
@@ -145,16 +172,12 @@ impl<'a> MountBuilder<'a> {
                     };
                 }
 
-                let new_loopback = loopdev::LoopControl::open()?.next_free()?;
-                new_loopback
-                    .with()
-                    .read_only(flags.contains(MountFlags::RDONLY))
-                    .offset(loopback_offset)
-                    .attach(source)?;
-                let path = new_loopback.path().expect("loopback does not have path");
-                c_source = Some(to_cstring(path.as_os_str().as_bytes())?);
-                loop_path = Some(path);
-                loopback = Some(new_loopback);
+                loopback = Some(create_loopback(&flags)?);
+            }
+
+            #[cfg(feature = "loop")]
+            if loopback.is_none() && explicit_loopback {
+                loopback = Some(create_loopback(&flags)?);
             }
 
             if c_source.is_none() {

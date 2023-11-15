@@ -3,6 +3,7 @@
 
 use crate::UnmountFlags;
 use libc::{c_char, umount2};
+use proc_mounts::MountIter;
 use std::{ffi::CString, io, ops::Deref, os::unix::ffi::OsStrExt, path::Path, ptr};
 
 /// Unmount trait which enables any type that implements it to be upgraded into an `UnmountDrop`.
@@ -77,13 +78,27 @@ impl<T: Unmount> Drop for UnmountDrop<T> {
 /// }
 /// ```
 pub fn unmount<P: AsRef<Path>>(path: P, flags: UnmountFlags) -> io::Result<()> {
-    let mount = CString::new(path.as_ref().as_os_str().as_bytes().to_owned());
-    let mount_ptr = mount
-        .as_ref()
-        .ok()
-        .map_or(ptr::null(), |cstr| cstr.as_ptr());
+    // Search the mounted devices, find whether we have the mounted location or the
+    // source location (e.g. "/mnt/drive" or "/dev/sda2")
+    if let Some(path) = MountIter::new()?.find_map(|mount| {
+        mount.ok().and_then(|mount| {
+            // Extract the destination path after checking we have the correct device
+            (mount.dest == path.as_ref() || mount.source == path.as_ref()).then_some(mount.dest)
+        })
+    }) {
+        let mount = CString::new(path.as_os_str().as_bytes());
+        let mount_ptr = mount
+            .as_ref()
+            .ok()
+            .map_or(ptr::null(), |cstr| cstr.as_ptr());
 
-    unsafe { unmount_(mount_ptr, flags) }
+        unsafe { unmount_(mount_ptr, flags) }
+    } else {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "could not find device associated with the path",
+        ))
+    }
 }
 
 #[inline]

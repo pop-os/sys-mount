@@ -9,6 +9,7 @@ use libc::{
 
 bitflags! {
     /// Flags which may be specified when mounting a file system.
+    #[derive(Clone, Copy)]
     pub struct MountFlags: c_ulong {
         /// Perform a bind mount, making a file or a directory subtree visible at another
         /// point within a file system. Bind mounts may cross file system boundaries and
@@ -95,6 +96,7 @@ bitflags! {
 
 bitflags! {
     /// Flags which may be specified when unmounting a file system.
+    #[derive(Clone, Copy)]
     pub struct UnmountFlags: c_int {
         /// Force unmount even if busy. This can cause data loss. (Only for NFS mounts.)
         const FORCE = MNT_FORCE;

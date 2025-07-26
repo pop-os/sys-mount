@@ -169,9 +169,8 @@ impl<'a> MountBuilder<'a> {
                         flags |= MountFlags::RDONLY;
                         FilesystemType::Manual("squashfs")
                     };
+                    loopback = Some(create_loopback(&flags)?);
                 }
-
-                loopback = Some(create_loopback(&flags)?);
             }
 
             #[cfg(feature = "loop")]

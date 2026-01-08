@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use crate::umount::{unmount_, Unmount, UnmountDrop};
-use crate::{MountBuilder, UnmountFlags};
+use crate::{MountBuilder, PropagationType, UnmountFlags};
+use std::ptr;
 use std::{
     ffi::{CString, OsStr},
     io,
@@ -94,6 +95,26 @@ impl Mount {
     #[must_use]
     pub fn target_path(&self) -> &Path {
         Path::new(OsStr::from_bytes(self.target.as_bytes()))
+    }
+
+    /// Change the propagation type of the mount.
+    #[inline]
+    #[must_use]
+    pub fn set_propagation_type(&mut self, propagation_type: PropagationType) -> io::Result<()> {
+        let result = unsafe {
+            libc::mount(
+                ptr::null(),
+                self.target.as_ptr(),
+                ptr::null(),
+                propagation_type.bits(),
+                ptr::null(),
+            )
+        };
+
+        match result {
+            0 => Ok(()),
+            _err => Err(io::Error::last_os_error()),
+        }
     }
 
     #[inline]

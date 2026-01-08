@@ -3,8 +3,9 @@
 
 use libc::{
     c_int, c_ulong, MNT_DETACH, MNT_EXPIRE, MNT_FORCE, MS_BIND, MS_DIRSYNC, MS_MANDLOCK, MS_MOVE,
-    MS_NOATIME, MS_NODEV, MS_NODIRATIME, MS_NOEXEC, MS_NOSUID, MS_RDONLY, MS_REC, MS_RELATIME,
-    MS_REMOUNT, MS_SILENT, MS_STRICTATIME, MS_SYNCHRONOUS, O_NOFOLLOW,
+    MS_NOATIME, MS_NODEV, MS_NODIRATIME, MS_NOEXEC, MS_NOSUID, MS_PRIVATE, MS_RDONLY, MS_REC,
+    MS_RELATIME, MS_REMOUNT, MS_SHARED, MS_SILENT, MS_SLAVE, MS_STRICTATIME, MS_SYNCHRONOUS,
+    MS_UNBINDABLE, O_NOFOLLOW,
 };
 
 bitflags! {
@@ -91,6 +92,27 @@ bitflags! {
         /// Make writes on this file system synchronous (as though the O_SYNC flag to
         /// open(2) was specified for all file opens to this file system).
         const SYNCHRONOUS = MS_SYNCHRONOUS;
+    }
+}
+
+bitflags! {
+    /// Propagation type flags which may be specified after mounting a file system to specify how mount
+    /// events are propagated.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct PropagationType: c_ulong {
+        /// The mount is in a peer group, it can be replicated to as many mountpoints, and all replicas are identical
+        /// (events are propagated to other peer mounts).
+        const SHARED = MS_SHARED;
+
+        /// The mount can receive propagated mount events from its parent (peer group), but cannot propagate mount
+        /// events to the peer group.
+        const SLAVE = MS_SLAVE;
+
+        /// The mount is private, it neither receives or sends any mount events
+        const PRIVATE = MS_PRIVATE;
+
+        /// The mount is private and cannot be used as a bind mount source.
+        const UNBINDABLE = MS_UNBINDABLE;
     }
 }
 
